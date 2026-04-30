@@ -25,8 +25,7 @@ Beatrice Rossi
 
 ## 1. Introduction
  
-This project investigates how AI usage affects the operational margins of Alkemy, a digital agency. The central research question is: **"Beyond which threshold of AI usage does rework erode operational margins?"**
- 
+This project investigates how AI usage affects the operational margins of Alkemy, a digital agency. 
 The dataset provided by Alkemy contains 3,248 tasks and 34 variables covering the full task lifecycle — inputs (briefing quality, complexity), process (hours spent, AI usage percentage), output (quality score, rework) and economic value (revenue, cost, profit). The operation spans four teams (Content, Design, Media, SEO), seven task types (ad, article, design, dev, release, report, ticket), three seniority levels, and three pricing models (hourly 48%, fixed 38%, value_based 14%).
  
 The project addresses four main analytical questions and three advanced ones:
@@ -88,6 +87,7 @@ A first hint of the AI paradox also emerged here: short tasks (ticket, ad) carry
 **`ai_assisted` and the 20% system boundary**
 
 By cross-referencing `ai_assisted` (boolean) with `ai_usage_pct` (continuous), we identified a system-level rule embedded in the data: `ai_assisted` is always `False` when `ai_usage_pct` is below 20%, and `True` above it. This is not a business judgment — it is a hard threshold baked into the logging system. Records violating this rule in either direction were corrected, making `ai_assisted` a deterministic projection of `ai_usage_pct` at the 20% boundary. This finding directly informed the feature engineering: the lower bound of the `ai_usage_bin` categories is fixed at 20% rather than data-driven, because it carries a precise operational meaning. Using a sample-driven cut would have obscured exactly the threshold dynamic the research questions target.
+
 ---
 
 ### 2.3 Data Cleaning
@@ -153,6 +153,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** A binary comparison between low-AI tasks (ai_usage_pct < 20%) and all other tasks. This aggregate view showed a +50% median margin lift for AI-assisted tasks but no reduction in effort and no improvement in quality — a misleading result that motivates the finer-grained segmentation.
  
 **Evaluation metrics:** Δ% `total_effort`, Δpp `profit_margin`, and Δ `outcome_score` computed per task_type × ai_usage_bin cell, each relative to the same task type's own low-AI baseline. A cell qualifies as value-creating only if all three metrics move simultaneously in the favorable direction and the cell contains at least 30 observations. Statistical significance on the three axes is tested with Mann-Whitney U (two-sided).
+
+![screenshot](images/Q1_heatmap.png)
  
 ### Q2 — Where are losses incurred? (Section 6.2)
  
@@ -161,6 +163,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** Overall dataset loss rate (share of tasks with profit_margin < 0) and overall rework_ratio median, used as reference for each bin and task type.
  
 **Evaluation metrics:** Loss rate (% of tasks with negative profit_margin), median `rework_ratio`, `outcome_score` trend, and `errors` count across cells. Chi-square test for independence between ai_usage_bin and loss rate.
+
+![screenshot](images/Q2_heatmap.png)
  
 ### Q3 — Quality or just speed? (Section 6.3)
  
@@ -169,7 +173,9 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** Naive assumption that margin improvement reflects genuine productivity gains.
  
 **Evaluation metrics:** Δ`cost`, Δ`revenue`, and Δ`total_effort` across ai_usage_bin, with the relative magnitude of cost and revenue contributions to the total margin lift quantified in percentage terms.
- 
+
+![screenshot](images/Q3_heatmap.png)
+
 ### Q4 — When does AI become negative? (Section 6.4)
  
 **Purpose:** Identify the AI usage threshold beyond which quality degrades and rework accelerates, both in aggregate and separately for each of the four value-creating task types.
@@ -178,6 +184,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
  
 **Evaluation metrics:** Trend direction of `outcome_score`, `rework_ratio`, and `profit_margin` as continuous functions of `ai_usage_pct`. The threshold is defined as the first AI level at which quality or rework begins to move adversely with non-trivial magnitude.
  
+![screenshot](images/Q4_plot.png)
+
 ### Advanced 1 — Is the speed gain real? (Section 6.7)
  
 **Purpose:** Test whether the reduction in `hours_spent` at higher AI usage reflects a genuine time saving or whether the saved hours return as rework, leaving `total_effort` unchanged.
@@ -185,6 +193,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** `hours_spent` alone as the productivity metric, which is what headline delivery metrics typically report.
  
 **Evaluation metrics:** Comparison of `hours_spent` and `total_effort` trends across ai_usage_bin. The gap between the two curves — expressed as absolute hours and as a share of the apparent saving — measures the illusion component.
+
+![screenshot](images/A1_plot.png)
  
 ### Advanced 2 — When does rework destroy margin? (Section 6.8)
  
@@ -193,6 +203,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** Assumption that higher rework erodes margin monotonically, as the project brief implies.
  
 **Evaluation metrics:** Median `profit_margin` and loss rate (% profit_margin < 0) across `rework_ratio` quantile bins. A threshold would be visible as a discrete drop in median margin or a sharp increase in loss rate.
+
+![screenshot](images/A2_plot.png)
  
 ### Advanced 3 — When does the hourly model become unsustainable? (Section 6.9)
  
@@ -201,6 +213,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** Aggregate pricing-model comparison at the overall dataset level (profit_per_hour by pricing_model).
  
 **Evaluation metrics:** Median `profit_per_hour` by `pricing_model × ai_usage_bin`; gap in €/hour between hourly and alternative pricing models at each AI bin; within-hourly breakdown by seniority to test whether specific seniority-pricing combinations become structurally unprofitable.
+
+![screenshot](images/A3_plot.png)
  
 ### Modeling 1 — Profitability drivers under controls (Section 7.2)
  
@@ -209,6 +223,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** The raw EDA association between AI usage and profit_margin, without multivariate controls.
  
 **Evaluation metrics:** OLS: 5-fold CV R², coefficient magnitude and sign for `ai_usage_pct`, `ai_x_hourly` interaction term, `seniority_senior`, and `pricing_model` dummies. Random Forest: test R², RMSE, MDI feature importance, SHAP mean |value| ranking, SHAP beeswarm direction plot, SHAP dependence plot for `ai_usage_pct`.
+
+<img src="images/shap1.png" width="43%"/> <img src="images/shap2.png" width="55%"/>
  
 ### Modeling 2 — Pricing policy counterfactual (Section 7.3)
  
@@ -217,6 +233,8 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 **Baseline:** Naive comparison of hourly vs. fixed outcomes in the unmatched dataset, which confounds pricing structure with task-level differences.
  
 **Evaluation metrics:** ATT (Average Treatment Effect on the Treated) on `profit_margin`, expressed in percentage points; loss rate difference between matched hourly and fixed tasks; paired t-test p-value; propensity score overlap plots before and after matching as balance check.
+
+![screenshot](images/counterfactual.png)
  
 ---
 
@@ -276,8 +294,3 @@ We used Claude (Anthropic) as our primary AI assistant throughout the project. I
 **How we prompted.** Our prompts were always problem-specific and grounded in prior results. We described the analytical goal, specified which variables and transformations to use, and asked for code or text that implemented a decision we had already made. When AI output was incorrect or inconsistent with the data, we identified the error and asked for a correction with an explicit explanation of what was wrong. We never used AI to generate analytical decisions or interpret results on our behalf.
  
 **What this means for reproducibility.** Every piece of code in the notebook reflects a design choice made by the team. The AI was a tool for implementation, not a substitute for reasoning.
- 
-
-
-
-
