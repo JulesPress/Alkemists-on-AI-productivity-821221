@@ -68,8 +68,22 @@ python3 -m venv name-of-environment
 ```
 Activating the Environment:
 
-```bash (unix)
+```bash (windows)
 env\Scripts\activate
+```
+
+```bash (unix)
+source venv/bin/activate
+```
+
+Installing Dependencies:
+
+```bash (windows)
+pip install -r requirements.txt
+```
+
+```bash (unix)
+pip3 install -r requirements.txt
 ```
  
 ### 2.2 Dataset semantics: a foundational investigation
