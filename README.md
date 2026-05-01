@@ -160,8 +160,9 @@ The three advanced analyses extend the main findings: A1 compares hours_spent an
 ### 2.6 Modeling
 
 The modeling section validates and quantifies the exploratory findings through three complementary approaches. An OLS regression predicts `profit_margin` and includes a custom interaction term `ai_usage_pct × pricing_model_hourly` to formally test whether AI affects margin differently under hourly billing. A Random Forest (300 trees, max_depth=10, min_samples_leaf=10) captures non-linear and interaction effects; SHAP values are computed on a 300-task test subsample to show direction, magnitude, and the shape of the AI usage–margin relationship across the continuum. Propensity Score Matching (PSM) estimates the causal effect of hourly vs. fixed pricing by matching each hourly task to the most similar fixed-price task on ten observable covariates, with a caliper of 0.05, and computing the ATT on profit_margin and loss rate.
+
 ---
- 
+
 ## 3. Experimental Design
  
 All analytical experiments are conducted in Section 6 of the notebook. Each experiment targets one of the project's seven research questions using the cleaned and feature-engineered dataset.
