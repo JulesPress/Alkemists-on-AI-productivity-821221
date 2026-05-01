@@ -68,9 +68,12 @@ python3 -m venv name-of-environment
 ```
 Activating the Environment:
 
+For windows:
+
 ```bash (windows)
 env\Scripts\activate
 ```
+For unix-based systems:
 
 ```bash (unix)
 source venv/bin/activate
@@ -78,9 +81,12 @@ source venv/bin/activate
 
 Installing Dependencies:
 
+For windows:
+
 ```bash (windows)
 pip install -r requirements.txt
 ```
+For unix-based systems:
 
 ```bash (unix)
 pip3 install -r requirements.txt
