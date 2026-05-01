@@ -11,12 +11,19 @@ Beatrice Rossi
 
 1. [Introduction](#1-introduction)
 2. [Methods](#2-methods)
+
    2.1 [Environment](#21-environment)
+
    2.2 [Data Semantics](#22-dataset-semantics-a-foundational-investigation)
+
    2.3 [Data Cleaning](#23-data-cleaning)
+
    2.4 [Feature Engineering](#24-feature-engineering)
+
    2.5 [Analysis](#25-analysis)
+
    2.6 [Modeling](#26-modeling)
+   
 3. [Experimental Design](#3-experimental-design)
 4. [Results](#4-results)
 5. [Conslusions](#5-conclusions)
