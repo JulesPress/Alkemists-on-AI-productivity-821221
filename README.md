@@ -26,34 +26,35 @@ Beatrice Rossi
 ## 1. Introduction
  
 This project investigates how AI usage affects the operational margins of Alkemy, a digital agency. 
-The dataset provided by Alkemy contains 3,248 tasks and 34 variables covering the full task lifecycle — inputs (briefing quality, complexity), process (hours spent, AI usage percentage), output (quality score, rework) and economic value (revenue, cost, profit). The operation spans four teams (Content, Design, Media, SEO), seven task types (ad, article, design, dev, release, report, ticket), three seniority levels, and three pricing models (hourly 48%, fixed 38%, value_based 14%).
+The dataset provided by Alkemy contains 3,248 tasks and 34 variables covering the full task lifecycle, inputs (briefing quality, complexity), process (hours spent, AI usage percentage), output (quality score, rework) and economic value (revenue, cost, profit). The operation spans four teams (Content, Design, Media, SEO), seven task types (ad, article, design, dev, release, report, ticket), three seniority levels, and three pricing models (hourly 48%, fixed 38%, value_based 14%).
  
 The project addresses four main analytical questions and three advanced ones:
  
 **Main questions:**
-1. Where is value created? — In which task-type and AI-usage segments does AI simultaneously reduce effort, improve margin, and preserve quality?
-2. Where are losses incurred? — Where do rework, quality erosion, and margin losses concentrate?
-3. Is AI driving quality or just speed? — What economic mechanism underlies the observed margin lift?
-4. When does AI become negative? — At what AI usage level do quality and rework turn against the operation?
+1. Where is value created? In which task-type and AI-usage segments does AI simultaneously reduce effort, improve margin, and preserve quality?
+2. Where are losses incurred? Where do rework, quality erosion, and margin losses concentrate?
+3. Is AI driving quality or just speed? What economic mechanism underlies the observed margin lift?
+4. When does AI become negative? At what AI usage level do quality and rework turn against the operation?
+
 **Advanced questions:**
-1. Is the speed gain real, or an accounting illusion? — Does `hours_spent` tell the true story, or does rework absorb the apparent saving?
-2. When does rework actually destroy margin? — Is there a rework intensity threshold beyond which profitability collapses?
-3. When does the hourly pricing model become unsustainable? — How does the structural mismatch between AI efficiency gains and hourly billing evolve as AI adoption grows?
+1. Is the speed gain real, or an accounting illusion? Does `hours_spent` tell the true story, or does rework absorb the apparent saving?
+2. When does rework actually destroy margin? Is there a rework intensity threshold beyond which profitability collapses?
+3. When does the hourly pricing model become unsustainable? How does the structural mismatch between AI efficiency gains and hourly billing evolve as AI adoption grows?
 
 ---
 
 ## 2. Methods
 
-The project follows a five-stage pipeline. We start with a preliminary EDA on the raw data to understand its structure, identify anomalies, and settle foundational questions about variable semantics before touching anything. We then clean each variable individually, documenting every decision with an explicit justification. Once the data is clean, we engineer the features needed to answer the research questions — profitability ratios, effort metrics, AI usage bins. We then run the analysis across seven questions, moving from value creation to loss localization to threshold detection. Finally, we validate and quantify the exploratory findings through statistical and machine learning models: OLS with an interaction term, a Random Forest with SHAP, and Propensity Score Matching. Each stage informs the next: cleaning decisions depend on what the EDA revealed, feature definitions depend on what the analysis requires, and the modeling targets are defined by the thresholds and mechanisms the analysis identified.
+The project follows a five-stage pipeline. We start with a preliminary EDA on the raw data to understand its structure, identify anomalies, and settle foundational questions about variable semantics before touching anything. We then clean each variable individually, documenting every decision with an explicit justification. Once the data is clean, we engineer the features needed to answer the research questions, profitability ratios, effort metrics, AI usage bins. We then run the analysis across seven questions, moving from value creation to loss localization to threshold detection. Finally, we validate and quantify the exploratory findings through statistical and machine learning models: OLS with an interaction term, a Random Forest with SHAP, and Propensity Score Matching. Each stage informs the next: cleaning decisions depend on what the EDA revealed, feature definitions depend on what the analysis requires, and the modeling targets are defined by the thresholds and mechanisms the analysis identified.
 
 ### 2.1 Environment
 
 The project was implemented in Python 3. Key libraries include:
 
-- `pandas`, `numpy` — data manipulation
-- `matplotlib`, `seaborn` — visualization
-- `scikit-learn` — modeling and evaluation
-- `scipy` — statistical testing 
+- `pandas`, `numpy` data manipulation
+- `matplotlib`, `seaborn` visualization
+- `scikit-learn` modeling and evaluation
+- `scipy` statistical testing 
 
 To recreate the environment:
 
@@ -98,7 +99,7 @@ Before any cleaning or modeling, we conducted a formal investigation into the se
  
 **Hours variables: task-level or per-phase?**
 
-We verified that `hours_spent`, `billable_hours`, and `rework_hours` record effort for the entire task, not just the phase visible at export. Three tests confirmed this. First, among the 48 duplicate `task_id` records — the same task captured twice with different `workflow_stage` labels — 34/36 pairs with a stage change showed perfectly identical `hours_spent` and 36/36 identical `billable_hours`. Second, η² analysis showed that `task_type` explains 16.5% of variance in `hours_spent` and `task_complexity_score` another 9.3%, while `workflow_stage` (0.18%) and `task_status` (0.05%) sit at noise level. Third, the task-type effort ranking — ticket (7.7h) < ad (8.7h) < article (10.5h) < design (11.5h) < report (12.2h) < dev (13.8h) < release (15.0h) — is statistically significant (Kruskal-Wallis p ≈ 10⁻¹⁴³) and operationally coherent.
+We verified that `hours_spent`, `billable_hours`, and `rework_hours` record effort for the entire task, not just the phase visible at export. Three tests confirmed this. First, among the 48 duplicate `task_id` records, the same task captured twice with different `workflow_stage` labels, 34/36 pairs with a stage change showed perfectly identical `hours_spent` and 36/36 identical `billable_hours`. Second, η² analysis showed that `task_type` explains 16.5% of variance in `hours_spent` and `task_complexity_score` another 9.3%, while `workflow_stage` (0.18%) and `task_status` (0.05%) sit at noise level. Third, the task-type effort ranking, ticket (7.7h) < ad (8.7h) < article (10.5h) < design (11.5h) < report (12.2h) < dev (13.8h) < release (15.0h), is statistically significant (Kruskal-Wallis p ≈ 10⁻¹⁴³) and operationally coherent.
 
 The conclusion is that the three hour variables are **independent compartments**, not nested subsets. The correct total effort measure is `total_effort = hours_spent + rework_hours`. `workflow_stage` and `task_status` carry no effort signal.
 
@@ -106,7 +107,7 @@ A first hint of the AI paradox also emerged here: short tasks (ticket, ad) carry
 
 **`ai_assisted` and the 20% system boundary**
 
-By cross-referencing `ai_assisted` (boolean) with `ai_usage_pct` (continuous), we identified a system-level rule embedded in the data: `ai_assisted` is always `False` when `ai_usage_pct` is below 20%, and `True` above it. This is not a business judgment — it is a hard threshold baked into the logging system. Records violating this rule in either direction were corrected, making `ai_assisted` a deterministic projection of `ai_usage_pct` at the 20% boundary. This finding directly informed the feature engineering: the lower bound of the `ai_usage_bin` categories is fixed at 20% rather than data-driven, because it carries a precise operational meaning. Using a sample-driven cut would have obscured exactly the threshold dynamic the research questions target.
+By cross-referencing `ai_assisted` (boolean) with `ai_usage_pct` (continuous), we identified a system-level rule embedded in the data: `ai_assisted` is always `False` when `ai_usage_pct` is below 20%, and `True` above it. This is not a business judgment, it is a hard threshold baked into the logging system. Records violating this rule in either direction were corrected, making `ai_assisted` a deterministic projection of `ai_usage_pct` at the 20% boundary. This finding directly informed the feature engineering: the lower bound of the `ai_usage_bin` categories is fixed at 20% rather than data-driven, because it carries a precise operational meaning. Using a sample-driven cut would have obscured exactly the threshold dynamic the research questions target.
 
 ---
 
@@ -118,13 +119,13 @@ All 34 columns were inspected individually. Key decisions:
  
 **Categorical normalization:** `team` had 15 variants (case errors, typos, subcategories) mapped to 4 canonical teams; `task_type` had 29 variants mapped to 7 canonical types. The result is a perfectly balanced team distribution (~25% each) and a well-balanced task type distribution (~443-478 per category).
  
-**`hours_spent` anomalies:** we replaced a naive fixed-threshold approach with a diagnostic-based criterion. A record is flagged as corrupted if its `billable_ratio = billable_hours / hours_spent` falls below 0.15 or above 5 — thresholds corresponding to roughly 4.6× and 7× the population median respectively. This identified ~39 records with internally inconsistent hour accounting, cross-validated by a second independent diagnostic (`cost_per_hour < 15 €/h` vs. population median ~58 €/h). Corrupted values were imputed using `hours_spent = billable_hours / recovery_rate(pricing_model)`, where recovery rates are pricing-model-specific medians computed on clean records. Records with both fields corrupted simultaneously (irrecoverable) were dropped.
+**`hours_spent` anomalies:** we replaced a naive fixed-threshold approach with a diagnostic-based criterion. A record is flagged as corrupted if its `billable_ratio = billable_hours / hours_spent` falls below 0.15 or above 5, thresholds corresponding to roughly 4.6× and 7× the population median respectively. This identified ~39 records with internally inconsistent hour accounting, cross-validated by a second independent diagnostic (`cost_per_hour < 15 €/h` vs. population median ~58 €/h). Corrupted values were imputed using `hours_spent = billable_hours / recovery_rate(pricing_model)`, where recovery rates are pricing-model-specific medians computed on clean records. Records with both fields corrupted simultaneously (irrecoverable) were dropped.
  
 **`billable_hours` anomalies:** 82 missing values and 17 negative values (small write-offs at task closure, −1.90 to −0.28h) were imputed symmetrically using `billable_hours = hours_spent × recovery_rate(pricing_model)`. The same `efficiency_ratio` anchors imputation in both directions depending on which field is corrupted.
  
 **`ai_usage_pct`:** 142 missing values imputed using a hierarchical group-based median strategy. A bivariate η² comparison across all candidate predictors identified `seniority × task_complexity_score × team × deadline_pressure` as the combination explaining the most variance (21.8%). To avoid degenerate medians from sparse cells, a three-level hierarchy was applied: L1 (4 variables, N ≥ 5) → L2 (3 variables, drop `team`) → L3 (2 variables). Approximately 95% of NaN records were imputed at L1; none required the L3 fallback.
  
-**`rework_hours`:** 71 missing values imputed with a single-level group median on `scope_change_flag × task_complexity_score × deadline_pressure` (η² = 8.4%, the highest among tested combinations). Process-context variables — scope changes, complexity, deadline pressure — proved far more predictive of rework than team or seniority, consistent with rework being driven by task-specific events rather than worker characteristics. All 30 resulting groups had N ≥ 8, so no fallback was needed.
+**`rework_hours`:** 71 missing values imputed with a single-level group median on `scope_change_flag × task_complexity_score × deadline_pressure` (η² = 8.4%, the highest among tested combinations). Process-context variables, such as scope changes, complexity, deadline pressure, proved far more predictive of rework than team or seniority, consistent with rework being driven by task-specific events rather than worker characteristics. All 30 resulting groups had N ≥ 8, so no fallback was needed.
  
 **`outcome_score`:** 132 missing values imputed using a linear regression model (5-fold CV R² ≈ 0.35) rather than group-based median, because strong continuous predictors were available (`errors` r = −0.48, `brief_quality_score` r = +0.35) and group-median imputation would have thrown away the slopes of these relationships.
  
@@ -136,21 +137,21 @@ All 34 columns were inspected individually. Key decisions:
  
 Nine features were derived from the clean dataset:
  
-- `profit_margin = profit / revenue` — core profitability KPI; the primary target for threshold analysis
-- `efficiency_ratio = billable_hours / hours_spent` — billing efficiency; share of work hours actually billed
-- `rework_ratio = rework_hours / hours_spent` — quality cost; share of time spent on corrections
-- `cost_per_hour = cost / hours_spent` — operational cost per hour worked
-- `revenue_per_hour = revenue / hours_spent` — revenue generated per hour worked
-- `total_effort = hours_spent + rework_hours` — true effort accounting for rework as an additive compartment
-- `profit_per_hour = profit / total_effort` — true profitability per unit of effort actually invested; computed on `total_effort` rather than `hours_spent` to capture the rework cost that hourly metrics hide
-- `delivery_speed = delivery_days_actual / sla_days` — SLA performance ratio; < 1 means on time
-- `ai_usage_bin` — five business-driven bands aligned with Alkemy's operational categorization: low [0, 20%), low_medium [20, 40%), medium_high [40, 60%), high [60, 80%), very_high [80, 100]
+- `profit_margin = profit / revenue`, core profitability KPI; the primary target for threshold analysis
+- `efficiency_ratio = billable_hours / hours_spent`, billing efficiency; share of work hours actually billed
+- `rework_ratio = rework_hours / hours_spent`, quality cost; share of time spent on corrections
+- `cost_per_hour = cost / hours_spent`, operational cost per hour worked
+- `revenue_per_hour = revenue / hours_spent`, revenue generated per hour worked
+- `total_effort = hours_spent + rework_hours`, true effort accounting for rework as an additive compartment
+- `profit_per_hour = profit / total_effort`, true profitability per unit of effort actually invested; computed on `total_effort` rather than `hours_spent` to capture the rework cost that hourly metrics hide
+- `delivery_speed = delivery_days_actual / sla_days`, SLA performance ratio; < 1 means on time
+- `ai_usage_bin`, five business-driven bands aligned with Alkemy's operational categorization: low [0, 20%), low_medium [20, 40%), medium_high [40, 60%), high [60, 80%), very_high [80, 100]
 The 20% boundary is fixed rather than sample-driven because it has a hard system-level meaning (`ai_assisted` threshold). Sample-driven binning would obscure exactly the threshold dynamic the research question targets.
 
 
 ### 2.5 Analysis
 
-The analysis is structured around seven questions — four main and three advanced — all answered on the cleaned, feature-engineered dataset. The core method is segmentation: rather than looking at AI usage in aggregate, we break the data into task_type × ai_usage_bin cells and compare each cell against its own low-AI baseline. This controls for the fact that different task types have structurally different effort and margin profiles.
+The analysis is structured around seven questions, four main and three advanced, all answered on the cleaned, feature-engineered dataset. The core method is segmentation: rather than looking at AI usage in aggregate, we break the data into task_type × ai_usage_bin cells and compare each cell against its own low-AI baseline. This controls for the fact that different task types have structurally different effort and margin profiles.
 
 For value creation (Q1), we apply a joint three-axis test: a cell qualifies only if effort, margin, and quality all move in the favorable direction simultaneously, with at least 30 observations. For loss localization (Q2), we map loss rate, rework ratio, and outcome score across the full grid and use a chi-square test to determine whether losses are driven by AI usage or task type. For the margin decomposition (Q3), we classify each cell into operational regimes (quality-only, speed-only, joint, flat) and then decompose the P&L delta into cost and revenue components. For threshold detection (Q4), we fit LOWESS curves of outcome score, rework ratio, and profit margin against ai_usage_pct as a continuous variable, with bootstrap confidence bands, separately for each task type.
 
@@ -171,7 +172,7 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
  
 **Purpose:** Identify which combinations of task type and AI usage level generate a genuine, simultaneous improvement across all three value dimensions: less effort, higher profit margin, and stable or improved quality.
  
-**Baseline:** A binary comparison between low-AI tasks (ai_usage_pct < 20%) and all other tasks. This aggregate view showed a +50% median margin lift for AI-assisted tasks but no reduction in effort and no improvement in quality — a misleading result that motivates the finer-grained segmentation.
+**Baseline:** A binary comparison between low-AI tasks (ai_usage_pct < 20%) and all other tasks. This aggregate view showed a +50% median margin lift for AI-assisted tasks but no reduction in effort and no improvement in quality, a misleading result that motivates the finer-grained segmentation.
  
 **Evaluation metrics:** Δ% `total_effort`, Δpp `profit_margin`, and Δ `outcome_score` computed per task_type × ai_usage_bin cell, each relative to the same task type's own low-AI baseline. A cell qualifies as value-creating only if all three metrics move simultaneously in the favorable direction and the cell contains at least 30 observations. Statistical significance on the three axes is tested with Mann-Whitney U (two-sided).
 
@@ -189,7 +190,7 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
  
 ### Q3 — Quality or just speed? (Section 6.3)
  
-**Purpose:** Decompose the source of the observed margin lift — determining how much comes from cost reduction (fewer or cheaper hours) versus revenue increase (higher quality output attracting better billing).
+**Purpose:** Decompose the source of the observed margin lift, determining how much comes from cost reduction (fewer or cheaper hours) versus revenue increase (higher quality output attracting better billing).
  
 **Baseline:** Naive assumption that margin improvement reflects genuine productivity gains.
  
@@ -213,7 +214,7 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
  
 **Baseline:** `hours_spent` alone as the productivity metric, which is what headline delivery metrics typically report.
  
-**Evaluation metrics:** Comparison of `hours_spent` and `total_effort` trends across ai_usage_bin. The gap between the two curves — expressed as absolute hours and as a share of the apparent saving — measures the illusion component.
+**Evaluation metrics:** Comparison of `hours_spent` and `total_effort` trends across ai_usage_bin. The gap between the two curves, expressed as absolute hours and as a share of the apparent saving, measures the illusion component.
 
 ![screenshot](images/A1_plot.png)
  
@@ -263,13 +264,13 @@ All analytical experiments are conducted in Section 6 of the notebook. Each expe
 
 Looking at AI usage as a single number is misleading. AI-assisted tasks show a median profit margin about 50% higher than non-AI tasks, but effort and quality are flat. That aggregate hides very different outcomes depending on task type and AI intensity.
 
-When we segment by task type and AI usage level, the picture becomes clear. AI genuinely creates value — effort down, margin up, quality stable — only in four task types: design, dev, release, and report, at moderate AI usage (25–75%). These represent about 30% of the dataset. In the best cases, effort drops by 8–20% and profit margin improves by 8–25 percentage points, with quality holding or improving slightly. Creative tasks (ad, article) never meet all three conditions at any AI level. Ticket work gains margin but saves no effort. Above 80% AI usage, quality drops sharply — up to 17 outcome points below the low-AI baseline — in every task type with enough observations.
+When we segment by task type and AI usage level, the picture becomes clear. AI genuinely creates value, effort down, margin up, quality stable, only in four task types: design, dev, release, and report, at moderate AI usage (25–75%). These represent about 30% of the dataset. In the best cases, effort drops by 8–20% and profit margin improves by 8–25 percentage points, with quality holding or improving slightly. Creative tasks (ad, article) never meet all three conditions at any AI level. Ticket work gains margin but saves no effort. Above 80% AI usage, quality drops sharply, up to 17 outcome points below the low-AI baseline, in every task type with enough observations.
 
-On losses, the result is counterintuitive. The share of unprofitable tasks falls as AI usage rises, from 31.5% at low AI down to 14.0% at very high AI. Losses are driven by task type, not AI: ticket tasks are unprofitable in 30–42% of cases regardless of AI level. Rework grows with AI, but does not directly cause margin losses — both rework and margin rise together because both are driven by AI adoption, which also compresses costs.
+On losses, the result is counterintuitive. The share of unprofitable tasks falls as AI usage rises, from 31.5% at low AI down to 14.0% at very high AI. Losses are driven by task type, not AI: ticket tasks are unprofitable in 30–42% of cases regardless of AI level. Rework grows with AI, but does not directly cause margin losses, both rework and margin rise together because both are driven by AI adoption, which also compresses costs.
 
-Q3 has two parts. On the work side, AI is primarily a quality tool: the most common outcome is quality improvement without time savings (28% of tasks), while pure speed gains are rare — just 3.1% of tasks. On the financial side, the margin gains come mostly from cost reduction, not revenue growth. Cost falls by roughly €211 per task from low to high AI, while revenue rises only ~€47. This happens because AI allows junior staff to take on work that would otherwise require senior staff, which lowers the cost per task. So quality goes up and cost goes down at the same time — these two findings together explain where the margin lift comes from.
+Q3 has two parts. On the work side, AI is primarily a quality tool: the most common outcome is quality improvement without time savings (28% of tasks), while pure speed gains are rare, just 3.1% of tasks. On the financial side, the margin gains come mostly from cost reduction, not revenue growth. Cost falls by roughly €211 per task from low to high AI, while revenue rises only ~€47. This happens because AI allows junior staff to take on work that would otherwise require senior staff, which lowers the cost per task. So quality goes up and cost goes down at the same time, these two findings together explain where the margin lift comes from.
 
-Q4 identifies where AI starts to hurt. The safe ceiling is around 40% AI for dev, 38–45% for design and release, and 60–65% for report — the only task type with room to push further. Beyond these points, quality scores decline and rework accelerates. The problem is that profit margin keeps rising past these ceilings, because cost compression continues. This makes margin a lagging indicator: it looks fine while quality and rework are already moving in the wrong direction.
+Q4 identifies where AI starts to hurt. The safe ceiling is around 40% AI for dev, 38–45% for design and release, and 60–65% for report, the only task type with room to push further. Beyond these points, quality scores decline and rework accelerates. The problem is that profit margin keeps rising past these ceilings, because cost compression continues. This makes margin a lagging indicator: it looks fine while quality and rework are already moving in the wrong direction.
 
 The three advanced analyses add three specific findings. Roughly half the apparent time saving from AI disappears when rework is included; at very high AI usage the saving is fully absorbed — billed hours are ~2 hours below baseline but rework adds those same 2 hours back, leaving total effort unchanged. A rework-driven margin collapse never appears in the data — rework and margin both rise together, so the binding limit is quality, not rework volume. Under hourly billing, profit per hour stays flat at €8–15 regardless of AI usage, while under fixed it rises from €17 to €40 and under value_based from €31 to over €100. When AI saves time on an hourly contract, those saved hours cannot be billed — the gain goes to the client. Within hourly pricing, senior tasks lose money per hour at every AI level (−2 to −11 €/h); juniors are the only group that stays profitable.
 
@@ -297,18 +298,18 @@ The modeling results confirm and sharpen these findings. The OLS interaction ter
  
 ### Summary
 
-AI is not a uniformly value-creating technology at Alkemy. The exploratory analysis — internally consistent across seven independent analytical angles — and the modeling results converge on the same picture. AI creates real, measurable value in roughly 30% of the operational mix: technical task types (dev, design, release, report) at moderate AI usage (25–75%), under non-hourly pricing. In the remaining 70% it generates no net benefit or causes active harm. The economic mechanism is cost-arbitrage: AI reduces the cost of production by enabling juniors to handle work previously done by seniors, compressing internal cost per hour. This is confirmed both by the OLS decomposition and by SHAP values, which rank `seniority_senior` as the second-largest negative driver of profit margin after pricing model. The safe operational ceiling is approximately 40–50% AI usage for most technical tasks — consistent across the LOWESS curves in the EDA and the SHAP dependence plot in the RF model. Beyond this point, quality erodes while the P&L continues to look fine, because cost compression masks the degradation. The hourly pricing model is the structural bottleneck: the OLS interaction term (−0.27) confirms that AI makes hourly projects less profitable, not more, and PSM quantifies the cost at roughly 14 percentage points of additional loss rate compared to equivalent fixed-price tasks. The strategic implication is not "deploy more AI" but "fix the pricing structure first, then scale AI selectively" — cap usage at measured thresholds per task type, push harder only on report, disengage on creative and support work, and migrate hourly contracts toward fixed or value_based pricing before any further AI rollout.
+AI is not a uniformly value-creating technology at Alkemy. The exploratory analysis, internally consistent across seven independent analytical angles, and the modeling results converge on the same picture. AI creates real, measurable value in roughly 30% of the operational mix: technical task types (dev, design, release, report) at moderate AI usage (25–75%), under non-hourly pricing. In the remaining 70% it generates no net benefit or causes active harm. The economic mechanism is cost-arbitrage: AI reduces the cost of production by enabling juniors to handle work previously done by seniors, compressing internal cost per hour. This is confirmed both by the OLS decomposition and by SHAP values, which rank `seniority_senior` as the second-largest negative driver of profit margin after pricing model. The safe operational ceiling is approximately 40–50% AI usage for most technical tasks, consistent across the LOWESS curves in the EDA and the SHAP dependence plot in the RF model. Beyond this point, quality erodes while the P&L continues to look fine, because cost compression masks the degradation. The hourly pricing model is the structural bottleneck: the OLS interaction term (−0.27) confirms that AI makes hourly projects less profitable, not more, and PSM quantifies the cost at roughly 14 percentage points of additional loss rate compared to equivalent fixed-price tasks. The strategic implication is not "deploy more AI" but "fix the pricing structure first, then scale AI selectively", cap usage at measured thresholds per task type, push harder only on report, disengage on creative and support work, and migrate hourly contracts toward fixed or value_based pricing before any further AI rollout.
  
 
 ### Open questions and future work
  
-Several important questions remain unanswered. First, the PSM analysis controls for observable confounders but cannot rule out unobserved ones — a randomized pricing experiment or a natural experiment would be needed to fully establish causality. Second, quality erosion above the AI threshold is measured by `outcome_score` at delivery; the downstream effects on client retention and repeat revenue are not in the data, so the full economic cost of pushing AI too far may be substantially larger than what the current margin analysis captures. Third, the dataset lacks variables that would sharpen both the EDA and the models: the specific AI tool used per task (different tools likely have very different quality profiles), client satisfaction measured post-delivery, the split between internal vs. client-facing revision cycles, and the marginal cost per AI usage unit. Fourth, the current models explain roughly 31–38% of profit_margin variance. The remaining variance likely reflects client-level or project-level effects not captured in the task-level features — a multilevel model with random effects for client or project_id would be a natural next step and could surface whether the AI paradox is uniform across clients or concentrated in specific accounts.
+Several important questions remain unanswered. First, the PSM analysis controls for observable confounders but cannot rule out unobserved ones, a randomized pricing experiment or a natural experiment would be needed to fully establish causality. Second, quality erosion above the AI threshold is measured by `outcome_score` at delivery; the downstream effects on client retention and repeat revenue are not in the data, so the full economic cost of pushing AI too far may be substantially larger than what the current margin analysis captures. Third, the dataset lacks variables that would sharpen both the EDA and the models: the specific AI tool used per task (different tools likely have very different quality profiles), client satisfaction measured post-delivery, the split between internal vs. client-facing revision cycles, and the marginal cost per AI usage unit. Fourth, the current models explain roughly 31–38% of profit_margin variance. The remaining variance likely reflects client-level or project-level effects not captured in the task-level features, a multilevel model with random effects for client or project_id would be a natural next step and could surface whether the AI paradox is uniform across clients or concentrated in specific accounts.
 
 ## 6. AI Usage Disclaimer
  
 We used Claude (Anthropic) as our primary AI assistant throughout the project. In line with Alkemy's tracking requirements, this section documents how and why we used it.
  
-**What we did ourselves.** The analytical roadmap was defined entirely by the team: which questions to ask, which variables to investigate, which methodological choices to justify, and how to interpret results. All key decisions — the diagnostic-based criterion for `hours_spent` anomalies, the swap test for date inconsistencies, the hierarchical imputation strategy, the joint three-axis definition of AI value creation, and the interpretation of every finding — were reasoned through by the team before being implemented.
+**What we did ourselves.** The analytical roadmap was defined entirely by the team: which questions to ask, which variables to investigate, which methodological choices to justify, and how to interpret results. All key decisions, the diagnostic-based criterion for `hours_spent` anomalies, the swap test for date inconsistencies, the hierarchical imputation strategy, the joint three-axis definition of AI value creation, and the interpretation of every finding, were reasoned through by the team before being implemented.
  
 **What we used AI for.** We used Claude primarily for two things: suggesting clean, well-structured Python code only for complex visualizations and some useful statistical functions; and formatting outputs in Markdown. In both cases, we provided the logic, the variables, and the expected output; the AI translated that into working code or structured prose.
  
